@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gitmem"
+version = "0.1.0"
+description = "Versioned, user-controlled memory for long-running AI agents."
+requires-python = ">=3.11,<3.12"
+dependencies = [
+  "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+ui = [
+  "streamlit>=1.40",
+  "matplotlib>=3.8",
+]
+tokenizer = [
+  "tiktoken>=0.7",
+]
+vector = [
+  "sentence-transformers>=3.0",
+  "faiss-cpu>=1.8",
+]
+test = [
+  "pytest>=8.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["gitmem*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-ra"

@@ -1,45 +1,48 @@
-# [Project name]
+# GitMem
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+GitMem is a versioned, user-controlled memory engine for long-running AI agents, designed to make context reduction explainable and reversible.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- `python -m unittest discover -s tests -v` — run the foundation test suite
+- `python -m streamlit run gitmem/ui/app.py` — run the GitMem UI (created in a later phase)
+- `pnpm run typecheck` — typecheck the surrounding workspace packages
+- The core uses local SQLite and runs offline; no remote database or API key is required.
 
 ## Stack
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- Python 3.11, SQLite, and Streamlit
+- Offline-first deterministic mock language-model adapter
+- Optional embeddings: sentence-transformers with FAISS, with a TF-IDF fallback
+- Optional token counting: tiktoken, with a whitespace fallback
+- The surrounding Replit workspace remains a pnpm monorepo.
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `gitmem/` — modular Python implementation
+- `gitmem/models.py` — typed memory and versioning domain contracts
+- `gitmem/migrations/` — ordered SQLite schema migrations
+- `gitmem/config/default.yaml` — scoring, retrieval, tokenizer, and evaluation settings
+- `tests/` — automated Python tests
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Commit snapshots reference content revisions rather than duplicating original text.
+- Archiving changes active-memory membership; originals remain stored by default.
+- Optional embedding and tokenizer dependencies preserve a lightweight offline fallback path.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+The app is being built to offer reversible memory compression, explainable decisions, Git-like history operations, bounded retrieval, conflict review, answer attribution, canary checks, and baseline evaluation.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+Preserve the requested Python 3.11, SQLite, Streamlit, offline-first stack and proceed phase by phase.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- The Streamlit UI, LLM adapters, and remaining features are not implemented yet; Phase 1 is the foundation only.
 
 ## Pointers
 
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- See `pyproject.toml` for Python dependencies and `gitmem/config/default.yaml` for default engine settings.

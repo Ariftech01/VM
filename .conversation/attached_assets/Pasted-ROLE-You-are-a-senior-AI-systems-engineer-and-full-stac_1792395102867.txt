@@ -1,0 +1,65 @@
+ROLE
+You are a senior AI systems engineer and full-stack developer acting as an autonomous coding agent. Build a complete, working, demo-ready proof of concept called "GitMem": Git-Style Versioned Memory for Efficient and User-Controlled AI Agents. It is for the L&T Techgium hackathon, problem statement PS-2 ("Efficient and User-Controllable Context Memory for Long-Running Agentic AI").
+
+PROBLEM
+Long-running AI agents accumulate messages, decisions, documents and tool results across many sessions. Sending the entire history to the model repeatedly increases token consumption, inference cost and latency. Conventional summarization or truncation can remove important information, make the agent lose context, and make mistakes hard to recover from. GitMem works like Git for AI memory: it keeps a versioned record of the agent's context, explains every keep/summarize/archive decision, and lets users restore earlier states, branch into alternatives and merge compatible changes. Context reduction becomes reversible, traceable and user-controllable.
+
+The challenge requires: a working proof of concept, an inspectable interface, reversible memory management, and a comparison against baseline context-management approaches.
+
+HARD CONSTRAINTS
+- 100% free stack: Python 3.11, SQLite, sentence-transformers (all-MiniLM-L6-v2) + FAISS (fall back to a TF-IDF index if either fails to install), Streamlit UI. Do not use heavy multi-agent frameworks; the core innovation is the versioned memory engine.
+- The whole system must run fully OFFLINE through a deterministic MockLLM adapter (extractive summarizer + rule-based answerer) so demos never depend on an API.
+- Model-independent LLM adapter interface that separates memory management from the provider. Implement: MockLLM, OllamaAdapter (local), GeminiAdapter (free API key from env var), OpenAICompatibleAdapter.
+- Token counting through a tokenizer adapter (tiktoken) with a whitespace fallback counter for testing.
+- No placeholders, stubs or pseudo-code. Every file complete and runnable. Never fabricate results: every number in any report must come from code you actually ran.
+- Keep it simple and robust. Prefer correctness of the versioning and merge logic over extra polish.
+
+CORE SYSTEM (base design; all must work)
+1. Ingestion: split conversations and tool outputs into units of type turn / decision / code / constraint / fact / preference, each with topic label, timestamp, session id, token count.
+2. Memory scoring engine: score = weighted combination of importance, relevance to current goal, redundancy penalty, recency decay and user-pin boost. Weights and thresholds are configurable in YAML. Each unit gets one action: KEEP_VERBATIM, SUMMARIZE or ARCHIVE, with a human-readable reason and the full score breakdown (explainable compression).
+3. Tiered memory: pinned / hot (verbatim) / warm (summaries linked to their source units) / cold (archive). Originals are never deleted by default (reversible forgetting).
+4. Versioned memory store (the centerpiece): every memory update creates a commit with SHA-256 hash, parent hash(es), branch, timestamp, message, topic, per-unit decisions and reasons, token counts before/after, and a snapshot of active-memory membership. Commits form a hash-chained DAG; provide a verify-integrity command that detects tampering.
+5. Git-like operations: log, diff (between any two commits: units added/removed/changed tier, token delta), restore/checkout, revert, branch, merge, cherry-pick, tag/checkpoint, and manual edit (pin, unpin, force-keep, force-archive, edit text).
+6. RESTORE vs REHYDRATE are different operations, separate in API, CLI and UI. Restore rolls the whole active memory back to an earlier commit. Rehydrate selectively pulls specific archived units back into the active context without changing anything else. The UI must make this distinction obvious.
+7. Retrieval and context reconstruction: given a query and a token budget, build context = pinned facts + recent turns + relevant summaries + retrieved archived units, chosen by a value-per-token knapsack optimizer (not simple top-k). Return the context plus an explanation of every inclusion and exclusion.
+8. Conflict-aware 3-way merge: detect contradictions (rule-based + embedding similarity + optional LLM check) and temporal supersession (a newer fact such as "deadline moved to Friday" replaces the older one with a recorded supersedes-link). Compatible changes auto-merge. True conflicts go into a queue for user resolution and are never silently overwritten.
+
+NOVEL FEATURES (all must work)
+9. Memory Blame: for any generated answer, show which units, commits and decisions fed it (like git blame), with contribution highlighted.
+10. Memory Bisect: given a failing probe question, binary-search commit history to find the first commit that lost or corrupted the fact.
+11. Canary facts / Memory CI: user marks critical facts with probe questions. After every commit, run the probes automatically; a failing commit is flagged and can be auto-reverted with one click.
+12. Faithfulness gate: every summary must link to source unit IDs. A verifier checks that entities, numbers, dates and negations from the originals are preserved and that nothing new is introduced or contradicted. Failing summaries are rejected and the unit stays verbatim.
+13. What-if replay: ask the same question on two commits or branches and diff the answers, tokens and latency.
+14. Crypto-shred: an explicit, confirmed, IRREVERSIBLE delete for sensitive units (PII detected by regex), recorded as a tombstone in the hash-chained history so tampering stays evident. Reversible forgetting remains the default.
+15. Cost dashboard: live tokens saved, estimated cost (configurable price per 1K tokens) and latency versus each baseline.
+
+EVALUATION HARNESS
+- Compare GitMem against four baselines: full-history, sliding-window, rolling-summary, and retrieval-based (basic RAG).
+- Metrics: total token consumption, estimated inference cost, response latency, factual answer accuracy, critical-information recall, and recovery success (can a deliberately bad memory update be undone through version restoration?).
+- Dataset generator: controlled synthetic multi-session conversations containing facts, preferences, decisions, contradictions and corrections, with ground-truth Q&A.
+- An adapter to load a LongMemEval or LoCoMo subset if available; document licensing and suitability. If unavailable, say so in the README and rely on synthetic data.
+- Automated run that writes a results table (CSV + Markdown) and matplotlib charts.
+- Mistake-injection test: corrupt memory, then show canary detects -> bisect locates -> restore fixes, end to end.
+- Report honest results, including cases where GitMem loses to a baseline.
+
+STREAMLIT UI (inspectable and polished; clean, consistent styling)
+Pages: (1) Chat with the agent plus live token/cost meter; (2) Memory Explorer: tier view, per-unit decision, reason and score breakdown; (3) History: visual commit graph with branches, and a diff viewer; (4) Operations: restore, rehydrate, branch, merge with conflict-resolution screen, cherry-pick, edit, shred; (5) Blame and Bisect; (6) Canary/CI results; (7) Benchmark dashboard comparing all baselines. Include a one-click "Load demo scenario" button.
+
+DEMO SCENARIO (scripted, about 5 minutes)
+A 6-session project-planning conversation containing: a changed deadline, a contradictory requirement made on a branch, a wrongly summarized critical fact, and a PII item. The demo flow: compress -> mistake -> canary alert -> bisect -> restore -> rehydrate -> branch -> conflict merge -> shred -> benchmark dashboard.
+
+ARCHITECTURE AND CODE QUALITY
+Modular package layout: ingest/, scoring/, store/, versioning/, retrieval/, context/, llm/, eval/, ui/, tests/. Type hints and docstrings. SQLite schema with migrations. YAML config. A CLI (gitmem log | diff | restore | rehydrate | branch | merge | blame | bisect | shred | verify ...) mirroring the UI. pytest tests covering versioning and hash-chain integrity, merge and conflicts, restore-vs-rehydrate, faithfulness gate, bisect, canary CI and shred. A Makefile or run script.
+
+BUILD PROCESS (work autonomously, in this order; run the tests after every phase and fix failures before moving on)
+Phase 1: architecture, folder tree, SQLite schema, config, data models.
+Phase 2: ingestion, scoring engine, tiered store, LLM adapters (MockLLM first).
+Phase 3: versioning engine (commits, hash chain, log, diff, restore, revert, branch, tag, verify).
+Phase 4: retrieval, knapsack context builder, rehydrate, faithfulness gate.
+Phase 5: merge, conflict detection, supersession, cherry-pick, shred.
+Phase 6: blame, bisect, canary CI, what-if replay.
+Phase 7: evaluation harness, synthetic data generator, baselines, charts.
+Phase 8: Streamlit UI and demo scenario.
+Phase 9: README (setup, usage, Mermaid architecture diagram, evaluation method, honest limitations), demo script, final test run, and a 225-word project abstract that matches what was actually built.
+
+After each phase, give a short summary: what works, how to run and test it, and any known issues. If you hit output or credit limits, stop cleanly at the end of a phase, tell me which phase is next, and continue when I say "next". Start with Phase 1 now.

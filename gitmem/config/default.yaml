@@ -1,0 +1,43 @@
+app:
+  name: GitMem
+  offline_default: true
+  llm_adapter: mock
+
+storage:
+  database_path: data/gitmem.sqlite3
+  keep_originals: true
+
+scoring:
+  weights:
+    importance: 0.30
+    relevance: 0.25
+    redundancy: 0.15
+    recency: 0.20
+    pin_boost: 0.10
+  thresholds:
+    keep_verbatim: 0.68
+    summarize: 0.38
+    hot_token_budget: 2400
+  recency_half_life_days: 30
+
+retrieval:
+  default_token_budget: 1800
+  optimizer: value_per_token_knapsack
+  include_pinned: true
+
+embeddings:
+  model: sentence-transformers/all-MiniLM-L6-v2
+  index: faiss
+  fallback_index: tfidf
+  offline_only: true
+
+tokenizer:
+  primary: tiktoken
+  fallback: whitespace
+
+dashboard:
+  cost_per_1k_input_tokens: 0.00015
+
+evaluation:
+  synthetic_sessions: 6
+  random_seed: 42
