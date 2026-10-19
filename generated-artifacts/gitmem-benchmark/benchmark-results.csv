@@ -1,0 +1,6 @@
+strategy,total_tokens,estimated_cost,response_latency_ms,factual_answer_accuracy,critical_information_recall,recovery_success,questions,recovery_detail
+full-history,827,0.00012405,0.6208,0.5714,1.0,False,7,This baseline has no version-restore operation.
+sliding-window,477,7.155e-05,0.2978,0.4286,0.5714,False,7,This baseline has no version-restore operation.
+rolling-summary,316,4.74e-05,0.1865,0.2857,0.2857,False,7,This baseline has no version-restore operation.
+retrieval-based,330,4.95e-05,0.2153,0.5714,1.0,False,7,This baseline has no version-restore operation.
+GitMem,1408,0.0002112,1.0264,0.5714,1.0,True,7,corruption_flagged=True; restored_answer='Correction: the delivery deadline moved to Friday.'

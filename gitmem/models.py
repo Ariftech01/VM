@@ -142,6 +142,7 @@ class CommitDiff:
     removed: tuple[str, ...]
     tier_changed: tuple[tuple[str, MemoryTier, MemoryTier], ...]
     token_delta: int
+    content_changed: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

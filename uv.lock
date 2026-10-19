@@ -295,7 +295,11 @@ name = "gitmem"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "matplotlib" },
+    { name = "pytest" },
     { name = "pyyaml" },
+    { name = "streamlit" },
+    { name = "tiktoken" },
 ]
 
 [package.optional-dependencies]
@@ -317,11 +321,15 @@ vector = [
 [package.metadata]
 requires-dist = [
     { name = "faiss-cpu", marker = "extra == 'vector'", specifier = ">=1.8" },
+    { name = "matplotlib", specifier = ">=3.11.2" },
     { name = "matplotlib", marker = "extra == 'ui'", specifier = ">=3.8" },
+    { name = "pytest", specifier = ">=9.1.1" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=8.0" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "sentence-transformers", marker = "extra == 'vector'", specifier = ">=3.0" },
+    { name = "streamlit", specifier = ">=1.66.0" },
     { name = "streamlit", marker = "extra == 'ui'", specifier = ">=1.40" },
+    { name = "tiktoken", specifier = ">=0.14.0" },
     { name = "tiktoken", marker = "extra == 'tokenizer'", specifier = ">=0.7" },
 ]
 provides-extras = ["ui", "tokenizer", "vector", "test"]
