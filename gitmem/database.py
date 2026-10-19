@@ -20,6 +20,7 @@ def connect_database(path: str | Path = DEFAULT_DATABASE_PATH) -> sqlite3.Connec
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON")
     connection.execute("PRAGMA busy_timeout = 30000")
+    connection.execute("PRAGMA secure_delete = ON")
     return connection
 
 

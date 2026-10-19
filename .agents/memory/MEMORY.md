@@ -1,0 +1,1 @@
+- [Retrieval context selection](retrieval-context.md) — do not include archived source text alongside its active summary unless retrieval specifically favors the source.

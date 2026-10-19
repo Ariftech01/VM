@@ -4,8 +4,11 @@ GitMem is a versioned, user-controlled memory engine for long-running AI agents,
 
 ## Run & Operate
 
-- `python -m unittest discover -s tests -v` — run the foundation test suite
-- `python -m streamlit run gitmem/ui/app.py` — run the GitMem UI (created in a later phase)
+- `pytest -q` — run the GitMem test suite
+- `python -m streamlit run gitmem/ui/app.py --server.address 0.0.0.0 --server.port 8000` — run the GitMem UI
+- `python -m gitmem --help` — see CLI operations
+- `python -m gitmem demo` — load the six-session demo into the local database
+- `python -m gitmem benchmark` — run baseline evaluation and save reports under `generated-artifacts/`
 - `pnpm run typecheck` — typecheck the surrounding workspace packages
 - The core uses local SQLite and runs offline; no remote database or API key is required.
 
@@ -30,18 +33,20 @@ GitMem is a versioned, user-controlled memory engine for long-running AI agents,
 - Commit snapshots reference content revisions rather than duplicating original text.
 - Archiving changes active-memory membership; originals remain stored by default.
 - Optional embedding and tokenizer dependencies preserve a lightweight offline fallback path.
+- The default `MockLLM` is deterministic and offline. Live adapters are opt-in.
 
 ## Product
 
-The app is being built to offer reversible memory compression, explainable decisions, Git-like history operations, bounded retrieval, conflict review, answer attribution, canary checks, and baseline evaluation.
+The proof of concept offers reversible memory compression, explainable decisions, Git-like history operations, bounded retrieval, conflict review, answer attribution, canary checks, PII shredding, and baseline evaluation.
 
 ## User preferences
 
-Preserve the requested Python 3.11, SQLite, Streamlit, offline-first stack and proceed phase by phase.
+Preserve the requested Python 3.11, SQLite, Streamlit, offline-first stack.
 
 ## Gotchas
 
-- The Streamlit UI, LLM adapters, and remaining features are not implemented yet; Phase 1 is the foundation only.
+- Semantic retrieval uses a TF-IDF fallback unless local SentenceTransformer weights and FAISS are available; do not download model weights implicitly.
+- No LongMemEval or LoCoMo dataset is bundled. Only load an externally obtained local subset after confirming its license permits the intended evaluation.
 
 ## Pointers
 

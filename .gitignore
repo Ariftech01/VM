@@ -64,3 +64,4 @@ build/
 
 # Local GitMem state
 /data/
+/generated-artifacts/

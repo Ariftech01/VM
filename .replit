@@ -11,6 +11,27 @@ env = { "CI" = "true" }
 [workflows]
 runButton = "Project"
 
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "GitMem Streamlit"
+
+[[workflows.workflow]]
+name = "GitMem Streamlit"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "streamlit run gitmem/ui/app.py --server.address 0.0.0.0 --server.port 8000 --server.headless true --browser.gatherUsageStats false"
+waitForPort = 8000
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
 [agent]
 stack = "PNPM_WORKSPACE"
 expertMode = true
@@ -21,4 +42,4 @@ timeoutMs = 20000
 
 [nix]
 channel = "stable-25_05"
-packages = ["cairo", "cargo", "ffmpeg-full", "freetype", "ghostscript", "gobject-introspection", "gtk3", "libiconv", "libyaml", "pkg-config", "qhull", "rustc", "tcl", "tk"]
+packages = ["cairo", "cargo", "ffmpeg-full", "freetype", "ghostscript", "gobject-introspection", "gtk3", "libiconv", "libxcrypt", "libyaml", "openssl", "pkg-config", "qhull", "rustc", "tcl", "tk"]

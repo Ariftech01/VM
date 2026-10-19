@@ -277,6 +277,31 @@ class GitMemEngine:
         memberships = self.repo.commit_membership(target)
         candidates: list[ContextCandidate] = []
         seen: set[str] = set()
+        active_summary_sources: set[str] = set()
+        for membership in memberships:
+            if membership.item_kind != "summary":
+                continue
+            summary_id = membership.item_id.removeprefix("summary:")
+            active_summary_sources.update(
+                str(row["unit_id"])
+                for row in self.connection.execute(
+                    "SELECT unit_id FROM summary_sources WHERE summary_id = ?",
+                    (summary_id,),
+                )
+            )
+        recent_turn_ids = {
+            str(row["id"])
+            for row in self.connection.execute(
+                """
+                SELECT u.id
+                FROM units u JOIN commit_membership cm ON cm.item_id = u.id
+                WHERE cm.commit_hash = ? AND cm.item_kind = 'unit'
+                  AND u.unit_type = 'turn' AND cm.tier IN ('hot', 'pinned')
+                ORDER BY u.created_at DESC LIMIT 3
+                """,
+                (target,),
+            )
+        }
         for membership in memberships:
             text = self.repo.get_membership_text(membership)
             if not text or text == "[cryptographically shredded]":
@@ -284,6 +309,11 @@ class GitMemEngine:
             if membership.item_kind == "unit":
                 unit = self.repo.get_unit(membership.item_id, membership.revision_id)
                 if unit is None:
+                    continue
+                if (
+                    membership.tier == MemoryTier.COLD
+                    and unit.id in active_summary_sources
+                ):
                     continue
                 source_ids = (unit.id,)
                 base_value = self.scorer._importance(unit)
@@ -325,6 +355,11 @@ class GitMemEngine:
                 source_unit_ids=item.source_unit_ids,
             )
             for item in candidates
+            if (
+                item.tier == MemoryTier.PINNED
+                or item.id in recent_turn_ids
+                or retrieval_scores.get(item.id, 0.0) >= 0.045
+            )
         ]
         budget = token_budget or self.config.default_token_budget
         return build_context(query, candidates, budget, self.token_counter)

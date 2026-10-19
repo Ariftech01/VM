@@ -3,3 +3,6 @@
 
 # No need to store the pnpm store twice.
 .local
+
+# Generated evaluation reports and charts are runtime outputs.
+/generated-artifacts/

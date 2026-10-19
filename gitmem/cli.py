@@ -12,6 +12,7 @@ from typing import Any
 
 from gitmem.demo import load_demo_scenario
 from gitmem.eval.benchmarks import run_benchmark
+from gitmem.eval.loaders import load_local_subset
 from gitmem.models import MemoryAction, MemoryTier
 from gitmem.versioning.engine import GitMemEngine
 
@@ -106,6 +107,9 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("demo", help="Load and run the six-session demo scenario")
     benchmark_parser = subparsers.add_parser("benchmark", help="Run the synthetic baseline comparison")
     benchmark_parser.add_argument("--output-dir", default="generated-artifacts/gitmem-benchmark")
+    benchmark_parser.add_argument("--dataset", help="Optional local LongMemEval/LoCoMo JSON or JSONL subset")
+    benchmark_parser.add_argument("--dataset-name", choices=["LongMemEval", "LoCoMo"])
+    benchmark_parser.add_argument("--confirm-license", action="store_true")
     return parser
 
 
@@ -113,7 +117,18 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     if args.command == "benchmark":
-        _print(run_benchmark(args.output_dir))
+        dataset = None
+        source_note = None
+        if args.dataset:
+            if not args.dataset_name:
+                parser.error("--dataset-name is required with --dataset")
+            dataset = load_local_subset(
+                args.dataset,
+                args.dataset_name,
+                license_confirmed=args.confirm_license,
+            )
+            source_note = f"local {args.dataset_name} subset ({Path(args.dataset).name})"
+        _print(run_benchmark(args.output_dir, dataset, source_note))
         return 0
 
     engine = GitMemEngine(Path(args.db))
