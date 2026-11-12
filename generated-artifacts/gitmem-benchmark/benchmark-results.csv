@@ -1,6 +1,6 @@
-strategy,total_tokens,estimated_cost,response_latency_ms,factual_answer_accuracy,critical_information_recall,recovery_success,questions,recovery_detail
-full-history,825,0.00012375,1.8652,1.0,1.0,False,7,This baseline has no version-restore operation.
-sliding-window,475,7.125e-05,0.377,0.5714,0.5714,False,7,This baseline has no version-restore operation.
-rolling-summary,314,4.71e-05,0.2427,0.2857,0.2857,False,7,This baseline has no version-restore operation.
-retrieval-based,361,5.415e-05,0.3062,1.0,1.0,False,7,This baseline has no version-restore operation.
-GitMem,377,5.655e-05,0.3559,1.0,1.0,True,7,corruption_flagged=True; restored_answer='Correction: the delivery deadline moved to Friday.'
+strategy,input_tokens,output_tokens,total_tokens,estimated_cost,response_latency_ms,factual_answer_accuracy,critical_information_recall,recovery_success,questions,recovery_detail
+full-history,683,62,683,0.00010245,1.5996,1.0,1.0,False,7,This baseline has no version-restore operation.
+sliding-window,382,64,382,5.73e-05,0.7252,0.5714,0.5714,False,7,This baseline has no version-restore operation.
+rolling-summary,256,59,256,3.84e-05,0.6476,0.2857,0.2857,False,7,This baseline has no version-restore operation.
+retrieval-based,276,62,276,4.14e-05,0.6306,1.0,1.0,False,7,This baseline has no version-restore operation.
+GitMem,313,62,313,4.695e-05,0.7442,1.0,1.0,True,7,corruption_flagged=True; restored_answer='Correction: the delivery deadline moved to Friday.'

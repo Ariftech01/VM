@@ -192,6 +192,9 @@ def load_demo_scenario(engine: GitMemEngine) -> dict[str, Any]:
     )
     merge_result = engine.merge("main", branch_name)
     shred_commit = engine.shred(pii.id, confirmed=True, branch="main")
+    what_if_result = engine.what_if(
+        "The dashboard must show archived units?", "main", branch_name
+    )
     engine.tag(_SCENARIO_TAG, engine.head("main"), "Six-session GitMem demo checkpoint")
     return {
         "already_loaded": False,
@@ -212,7 +215,8 @@ def load_demo_scenario(engine: GitMemEngine) -> dict[str, Any]:
         "rehydrated_commit": rehydrated_commit,
         "branch": branch_name,
         "merge": merge_result,
+        "what_if": what_if_result,
         "shred_commit": shred_commit,
         "head": engine.head("main"),
-        "message": "Demo loaded: compressed memory, injected a bad summary, ran canary and bisect, restored, rehydrated, queued a branch conflict, and shredded detected PII.",
+        "message": "Demo loaded: compressed memory, injected a bad summary, ran canary and bisect, restored, rehydrated, queued a branch conflict, evaluated what-if replay, and shredded detected PII.",
     }

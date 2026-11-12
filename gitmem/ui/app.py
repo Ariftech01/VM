@@ -10,7 +10,7 @@ import streamlit as st
 
 from gitmem.config import load_config
 from gitmem.demo import load_demo_scenario
-from gitmem.eval.benchmarks import run_benchmark
+from gitmem.eval.benchmarks import calculate_baseline_savings, run_benchmark
 from gitmem.llm import GeminiAdapter, MockLLM, OllamaAdapter, OpenAICompatibleAdapter
 from gitmem.models import MemoryAction, MemoryTier
 from gitmem.versioning.engine import GitMemEngine
@@ -623,10 +623,22 @@ def render_benchmark() -> None:
         st.info("Run the comparison to generate the CSV, Markdown report, and charts.")
         return
     st.caption(
-        f"Dataset: {result['dataset']} · retrieval backend: {result['retrieval_backend']}"
+        f"Dataset: {result['dataset']} · retrieval backend: {result['retrieval_backend']} · "
+        f"pricing assumption: ${config.cost_per_1k_input_tokens:.6f} / 1K input tokens"
     )
     rows = result["rows"]
+    st.subheader("Baseline measurements")
     st.dataframe(rows, use_container_width=True, hide_index=True)
+
+    savings = result.get("savings") or calculate_baseline_savings(rows)
+    if savings:
+        st.subheader("Comparative savings (GitMem vs baselines)")
+        st.caption(
+            "Formula: 100 * (Baseline - GitMem) / Baseline. Positive values indicate GitMem saved tokens or cost. "
+            "Evaluated on identical workloads with answer accuracy and recall shown alongside."
+        )
+        st.dataframe(savings, use_container_width=True, hide_index=True)
+
     cols = st.columns(3)
     gitmem = next(row for row in rows if row["strategy"] == "GitMem")
     cols[0].metric("GitMem input tokens", f"{gitmem['total_tokens']:,}")
@@ -637,19 +649,28 @@ def render_benchmark() -> None:
             st.image(chart_path, use_container_width=True)
     csv_path = Path(result["csv_path"])
     markdown_path = Path(result["markdown_path"])
+    savings_csv = Path(result.get("savings_csv_path", ""))
+    download_cols = st.columns(3 if savings_csv.exists() else 2)
     if csv_path.exists():
-        st.download_button(
+        download_cols[0].download_button(
             "Download results CSV",
             csv_path.read_bytes(),
             file_name=csv_path.name,
             mime="text/csv",
         )
     if markdown_path.exists():
-        st.download_button(
+        download_cols[1].download_button(
             "Download report Markdown",
             markdown_path.read_text(encoding="utf-8"),
             file_name=markdown_path.name,
             mime="text/markdown",
+        )
+    if savings_csv.exists():
+        download_cols[2].download_button(
+            "Download savings CSV",
+            savings_csv.read_bytes(),
+            file_name=savings_csv.name,
+            mime="text/csv",
         )
     with st.expander("Per-question answers"):
         for strategy, answers in result["answers"].items():

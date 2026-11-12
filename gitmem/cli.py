@@ -103,6 +103,14 @@ def build_parser() -> argparse.ArgumentParser:
     shred_parser.add_argument("--confirm", action="store_true", required=True)
     shred_parser.add_argument("--branch", default="main")
 
+    what_if_parser = subparsers.add_parser(
+        "what-if", help="Replay a question on two commits/branches and diff answers"
+    )
+    what_if_parser.add_argument("question", help="Question to evaluate against both snapshots")
+    what_if_parser.add_argument("first", help="First commit hash, branch name, or tag")
+    what_if_parser.add_argument("second", help="Second commit hash, branch name, or tag")
+    what_if_parser.add_argument("--budget", type=int, help="Optional token budget")
+
     subparsers.add_parser("verify", help="Verify the hash-chained commit history")
     subparsers.add_parser("demo", help="Load and run the six-session demo scenario")
     benchmark_parser = subparsers.add_parser("benchmark", help="Run the synthetic baseline comparison")
@@ -195,6 +203,10 @@ def main(argv: list[str] | None = None) -> int:
             result = {"commit_hash": engine.shred(args.unit_id, args.confirm, args.branch)}
         elif args.command == "verify":
             result = engine.verify_integrity()
+        elif args.command == "what-if":
+            result = engine.what_if(
+                args.question, args.first, args.second, token_budget=args.budget
+            )
         elif args.command == "demo":
             result = load_demo_scenario(engine)
         else:
@@ -202,6 +214,9 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         _print(result)
         return 0
+    except (KeyError, ValueError, PermissionError) as exc:
+        print(f"gitmem error: {exc}", file=sys.stderr)
+        return 1
     finally:
         engine.close()
 

@@ -95,6 +95,8 @@ def run_benchmark(
                 )
                 response = mock.answer(qa.question, context)
                 row = metrics[strategy]
+                row["input_tokens"] = row.get("input_tokens", 0) + response.input_tokens
+                row["output_tokens"] = row.get("output_tokens", 0) + response.output_tokens
                 row["total_tokens"] += response.input_tokens
                 row["response_latency_ms"] += response.latency_ms
                 row["factual_correct"] += int(
@@ -109,6 +111,8 @@ def run_benchmark(
                         "question": qa.question,
                         "expected": qa.expected_answer,
                         "answer": response.text,
+                        "input_tokens": response.input_tokens,
+                        "output_tokens": response.output_tokens,
                         "tokens": response.input_tokens,
                         "correct": qa.expected_answer.casefold() in response.text.casefold(),
                     }
@@ -145,6 +149,8 @@ def run_benchmark(
         rows.append(
             {
                 "strategy": strategy,
+                "input_tokens": source.get("input_tokens", source["total_tokens"]),
+                "output_tokens": source.get("output_tokens", 0),
                 "total_tokens": source["total_tokens"],
                 "estimated_cost": round(source["total_tokens"] * price / 1000.0, 8),
                 "response_latency_ms": round(source["response_latency_ms"], 4),
@@ -156,17 +162,23 @@ def run_benchmark(
             }
         )
 
+    savings = calculate_baseline_savings(rows, target_strategy="GitMem")
     csv_path = output / "benchmark-results.csv"
+    savings_csv_path = output / "benchmark-savings.csv"
     markdown_path = output / "benchmark-results.md"
     _write_csv(csv_path, rows)
+    if savings:
+        _write_csv(savings_csv_path, savings)
     markdown_path.write_text(
-        _markdown_report(rows, dataset, metrics, source_note), encoding="utf-8"
+        _markdown_report(rows, dataset, metrics, source_note, savings=savings), encoding="utf-8"
     )
     chart_paths = _write_charts(output, rows)
     return {
         "dataset": dataset.name,
         "rows": rows,
+        "savings": savings,
         "csv_path": str(csv_path),
+        "savings_csv_path": str(savings_csv_path),
         "markdown_path": str(markdown_path),
         "chart_paths": chart_paths,
         "retrieval_backend": retrieved_index.backend,
@@ -202,11 +214,74 @@ def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
         writer.writerows(rows)
 
 
+def calculate_baseline_savings(
+    rows: list[dict[str, Any]],
+    target_strategy: str = "GitMem",
+) -> list[dict[str, Any]]:
+    """Compute token, cost, and latency delta/savings for target_strategy vs all other baselines.
+
+    Formula for savings percentage: 100 * (baseline_val - target_val) / baseline_val.
+    When baseline is zero, percentage is None (reported as 'N/A' or unavailable).
+    """
+    target = next((row for row in rows if row["strategy"] == target_strategy), None)
+    if not target:
+        return []
+
+    comparisons: list[dict[str, Any]] = []
+    for row in rows:
+        if row["strategy"] == target_strategy:
+            continue
+        baseline_strategy = row["strategy"]
+        b_tokens = row.get("input_tokens", row.get("total_tokens", 0))
+        g_tokens = target.get("input_tokens", target.get("total_tokens", 0))
+        token_savings = b_tokens - g_tokens
+        token_savings_pct = (
+            round(100.0 * token_savings / b_tokens, 2) if b_tokens > 0 else None
+        )
+
+        b_cost = row.get("estimated_cost", 0.0)
+        g_cost = target.get("estimated_cost", 0.0)
+        cost_savings = round(b_cost - g_cost, 8)
+        cost_savings_pct = (
+            round(100.0 * (b_cost - g_cost) / b_cost, 2) if b_cost > 0.0 else None
+        )
+
+        b_latency = row.get("response_latency_ms", 0.0)
+        g_latency = target.get("response_latency_ms", 0.0)
+        latency_delta = round(g_latency - b_latency, 4)
+
+        comparisons.append(
+            {
+                "baseline": baseline_strategy,
+                "target": target_strategy,
+                "baseline_tokens": b_tokens,
+                "target_tokens": g_tokens,
+                "tokens_saved": token_savings,
+                "tokens_saved_pct": token_savings_pct,
+                "baseline_cost": b_cost,
+                "target_cost": g_cost,
+                "cost_saved": cost_savings,
+                "cost_saved_pct": cost_savings_pct,
+                "baseline_latency_ms": b_latency,
+                "target_latency_ms": g_latency,
+                "latency_delta_ms": latency_delta,
+                "baseline_accuracy": row.get("factual_answer_accuracy", 0.0),
+                "target_accuracy": target.get("factual_answer_accuracy", 0.0),
+                "baseline_recall": row.get("critical_information_recall", 0.0),
+                "target_recall": target.get("critical_information_recall", 0.0),
+                "baseline_recovery": row.get("recovery_success", False),
+                "target_recovery": target.get("recovery_success", False),
+            }
+        )
+    return comparisons
+
+
 def _markdown_report(
     rows: list[dict[str, Any]],
     dataset: SyntheticDataset,
     metrics: dict[str, dict[str, Any]],
     source_note: str | None = None,
+    savings: list[dict[str, Any]] | None = None,
 ) -> str:
     lines = [
         f"# GitMem synthetic benchmark ({dataset.name})",
@@ -223,6 +298,29 @@ def _markdown_report(
             f"{row['response_latency_ms']:.4f} | {row['factual_answer_accuracy']:.1%} | "
             f"{row['critical_information_recall']:.1%} | {'yes' if row['recovery_success'] else 'no'} |"
         )
+
+    if savings:
+        lines.extend(
+            [
+                "",
+                "## Comparative Savings vs Baselines",
+                "",
+                "Calculated as `100 * (Baseline - GitMem) / Baseline` for tokens and cost. "
+                "A positive value indicates GitMem used fewer tokens or cost less.",
+                "",
+                "| Baseline | Baseline Tokens | GitMem Tokens | Tokens Saved | Token Savings % | Cost Saved | Baseline Accuracy | GitMem Accuracy |",
+                "|---|---:|---:|---:|---:|---:|---:|---:|",
+            ]
+        )
+        for s in savings:
+            pct_str = f"{s['tokens_saved_pct']:+.1f}%" if s['tokens_saved_pct'] is not None else "N/A"
+            cost_str = f"${s['cost_saved']:+.8f}"
+            lines.append(
+                f"| {s['baseline']} | {s['baseline_tokens']} | {s['target_tokens']} | "
+                f"{s['tokens_saved']:+d} | {pct_str} | {cost_str} | "
+                f"{s['baseline_accuracy']:.1%} | {s['target_accuracy']:.1%} |"
+            )
+
     lines.extend(
         [
             "",

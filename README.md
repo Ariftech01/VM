@@ -17,11 +17,12 @@ Run the CLI and tests:
 ```bash
 python -m gitmem --help
 python -m gitmem demo
+python -m gitmem what-if "What is the launch deadline?" main demo/requirement-alternative
 python -m gitmem benchmark
 pytest -q
 ```
 
-The benchmark writes CSV, Markdown, and PNG reports under `generated-artifacts/gitmem-benchmark/`. That directory is excluded from version control and deployment packaging.
+The benchmark writes CSV (results and comparative savings), Markdown, and PNG reports under `generated-artifacts/gitmem-benchmark/`. That directory is excluded from version control and deployment packaging.
 
 ## What is included
 
@@ -29,9 +30,10 @@ The benchmark writes CSV, Markdown, and PNG reports under `generated-artifacts/g
 - Deterministic faithfulness checks for entities, numbers, dates, negation, and unsupported details before a summary can replace active context.
 - SQLite-backed immutable text revisions, commit snapshots, hash-linked history, tags, branches, diff, restore, revert, cherry-pick, edit, and selective rehydration.
 - Retrieval with an exact bounded knapsack selector, inclusion/exclusion explanations, source attribution, and per-answer token/cost/latency records.
+- What-if replay across branches or commit snapshots to diff answers, tokens, and latency.
 - Three-way branch merging, explicit conflict review, source-level blame, history bisect, canary checks, and known-good recovery.
 - User-confirmed PII text removal with retained content hashes and shred tombstones.
-- Streamlit screens for chat, memory inspection, history, operations, blame/bisect, canary checks, and benchmarks.
+- Streamlit screens for chat, memory inspection, history, operations, blame/bisect, canary checks, and benchmarks with baseline savings metrics.
 - Offline `MockLLM`, optional Ollama, Gemini, and OpenAI-compatible adapters.
 
 ### Architecture

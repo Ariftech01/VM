@@ -89,6 +89,34 @@ class GitMemEngine:
             raise KeyError(f"Unknown branch or empty branch: {branch}")
         return result
 
+    def resolve_ref(self, ref: str) -> str:
+        """Resolve a branch name, tag name, full commit hash, or prefix to a commit hash."""
+        if not ref or not ref.strip():
+            raise ValueError("Reference cannot be empty.")
+        cleaned = ref.strip()
+        branch_head = self.repo.branch_head(cleaned)
+        if branch_head is not None:
+            return branch_head
+        tag_row = self.connection.execute(
+            "SELECT commit_hash FROM tags WHERE name = ?", (cleaned,)
+        ).fetchone()
+        if tag_row is not None:
+            return str(tag_row["commit_hash"])
+        commit_row = self.repo.commit_row(cleaned)
+        if commit_row is not None:
+            return str(commit_row["hash"])
+        if len(cleaned) >= 4:
+            matches = self.connection.execute(
+                "SELECT hash FROM commits WHERE hash LIKE ?", (f"{cleaned}%",)
+            ).fetchall()
+            if len(matches) == 1:
+                return str(matches[0]["hash"])
+            elif len(matches) > 1:
+                raise ValueError(
+                    f"Ambiguous commit reference: {cleaned} matches {len(matches)} commits."
+                )
+        raise KeyError(f"Unknown commit, branch, or tag reference: {ref}")
+
     def ingest(
         self,
         messages: Sequence[dict[str, Any]],
@@ -906,22 +934,28 @@ class GitMemEngine:
     def what_if(
         self,
         question: str,
-        first_commit: str,
-        second_commit: str,
+        first_ref: str,
+        second_ref: str,
         token_budget: int | None = None,
     ) -> dict[str, Any]:
         """Replay one question at two snapshots and return answer/token/latency differences."""
-        first = self.answer(question, token_budget, commit_hash=first_commit, record=False)
-        second = self.answer(question, token_budget, commit_hash=second_commit, record=False)
+        if not question or not question.strip():
+            raise ValueError("Question cannot be empty.")
+        first_commit = self.resolve_ref(first_ref)
+        second_commit = self.resolve_ref(second_ref)
+        first = self.answer(question.strip(), token_budget, commit_hash=first_commit, record=False)
+        second = self.answer(question.strip(), token_budget, commit_hash=second_commit, record=False)
         return {
-            "question": question,
+            "question": question.strip(),
             "first": {
+                "reference": first_ref,
                 "commit_hash": first_commit,
                 "answer": first["response"].text,
                 "tokens": first["response"].input_tokens,
                 "latency_ms": first["response"].latency_ms,
             },
             "second": {
+                "reference": second_ref,
                 "commit_hash": second_commit,
                 "answer": second["response"].text,
                 "tokens": second["response"].input_tokens,
@@ -929,7 +963,7 @@ class GitMemEngine:
             },
             "answers_differ": first["response"].text != second["response"].text,
             "token_delta": second["response"].input_tokens - first["response"].input_tokens,
-            "latency_delta_ms": second["response"].latency_ms - first["response"].latency_ms,
+            "latency_delta_ms": round(second["response"].latency_ms - first["response"].latency_ms, 4),
         }
 
     def shred(self, unit_id: str, confirmed: bool, branch: str = "main") -> str:
